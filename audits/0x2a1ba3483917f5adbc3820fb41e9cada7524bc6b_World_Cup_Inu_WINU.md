@@ -4,8 +4,8 @@
 
 | Property | Value |
 |----------|-------|
-| **Audit Revision** | 4 |
-| **Audit Date** | 2026-05-27T13:12:29.833Z (UTC) |
+| **Audit Revision** | 5 |
+| **Audit Date** | 2026-06-09T13:30:57.350Z (UTC) |
 | **Blockchain** | BNB Smart Chain |
 | **Contract Address** | `0x2a1ba3483917f5adbc3820fb41e9cada7524bc6b` |
 | **AI Models Used** | 1 model(s) |
@@ -21,11 +21,11 @@
 
 ## 🤖 Analysis #1: GPT-5
 
-**Completed:** Wed, 27 May 2026 13:12:29 GMT
+**Completed:** Tue, 09 Jun 2026 13:30:57 GMT
 
 ### Summary
 
-`WorldCupInu` is a tax-based `ERC20` token on BSC with adjustable buy/sell taxes (default 3%/3%) and owner-controlled limits and exemptions. It routes tax proceeds to a `marketingWallet` via swaps and enforces max transaction and wallet limits with a hard floor of 2% of total supply. No proxy or mint/burn after deployment were found; primary risks are centralization of controls and MEV exposure on tax swaps. Overall Risk: MEDIUM – Owner retains broad control; no backdoors detected.
+This is a standard `ERC20` tax token (`WorldCup Inu`, 9 decimals, fixed supply) with buy/sell taxes routed to a `marketingWallet` via auto-swap on `PancakeRouter`. It has owner-controlled parameters (tax rates up to 10%, AMM pair flags, fee/tx exemptions) and trading gate plus optional anti-whale limits (currently disabled on-chain). Overall, the code is simple and non-upgradeable, but centralized control and launch fairness concerns exist. Overall Risk: MEDIUM – Owner can change taxes/exemptions and trade pre-launch; no upgrade proxy or minting backdoors found.
 
 ### Risk Assessment
 
@@ -33,59 +33,59 @@
 
 | Property | Value | Status |
 |----------|-------|--------|
-| Buy Tax | 3% (max 10%) | ✅ Low |
-| Sell Tax | 3% (max 10%) | ✅ Low |
-| Max Transaction | 2% of supply (floor ≥2%) | ✅ Reasonable |
-| Contract Type | Standard (no proxy) | Info only |
-| Ownership | Active (0x5796...) | ⚠️ Centralized |
-| Pause Function | Trading gate (`tradingEnabled`) | ⚠️ Can halt trading (until enabled) |
+| Buy Tax | 3% (max 10%) | ⚠️ Moderate |
+| Sell Tax | 3% (max 10%) | ⚠️ Moderate |
+| Max Transaction | None (limits disabled on-chain) | ✅ No restriction |
+| Contract Type | Standard (non-upgradeable) | Info |
+| Ownership | Active (`owner()` nonzero) | ⚠️ Centralized |
+| Pause Function | No full pause; trading gate only | ✅ No hard pause |
 
 **Security Assessment:**
 
 | Category | Risk Level | Notes |
 |----------|------------|-------|
-| Security | Medium | MEV on swaps; arbitrary AMM marking affects fees/limits |
-| Centralization | Medium | Owner can change taxes (≤10%), limits, exemptions, AMM pairs; withdraw BNB |
-| Code Quality | Medium | Custom minimal libs; SafeERC20/Address deviate from OZ |
-| Exploit Likelihood | Low | No reentrancy/proxy/backdoor; typical tax-token risks |
-| **Overall Risk Score** | **86/100** | No criticals; moderate centralization/MEV concerns |
+| Security | Low | No reentrancy/mint backdoors; basic ERC20 with taxes |
+| Centralization | Medium | Owner controls taxes, exemptions, AMM flags, trading enable |
+| Code Quality | Medium | Custom `Address`/`SafeERC20`; minor deviations from OZ |
+| Exploit Likelihood | Low | Typical tax-token surface; no external protocol integrations |
+| **Overall Risk Score** | **89/100** | No crit/high vulns; centralized controls and MEV exposure lower score |
 
 ## On-Chain Function Results
 
 | Function | On-Chain Value | Explanation |
 |----------|----------------|-------------|
-| `DEAD()` | `0x000000000000000000000000000000000000dEaD` | Burn/sink address used for irretrievable tokens |
-| `FEE_DENOMINATOR()` | `10000` | Basis points denominator for tax calculations |
-| `MAX_LIMIT()` | `200` | Enforces min limit floor at 2% of supply |
-| `MAX_TAX()` | `1000` | Maximum allowed tax is 10% (1000/10000) |
-| `PANCAKE_ROUTER()` | `0x10ED...024E` | PancakeSwap V2 router used for swaps |
-| `TOTAL_SUPPLY()` | `1000000000000000000` | Total base units minted (1e18 = 1,000,000,000 tokens @9 decimals) |
-| `WETH()` | `0xbb4C...095c` | WBNB token address on BSC |
-| `buyTax()` | `300` | Buy tax set to 3% (300/10000) |
+| `DEAD()` | `0x000000000000000000000000000000000000dEaD` | Burn address used to permanently remove tokens |
+| `FEE_DENOMINATOR()` | `10000` | Basis points denominator for tax math (10000 = 100%) |
+| `MAX_LIMIT()` | `200` | 2% minimum cap for maxTx/maxWallet thresholds |
+| `MAX_TAX()` | `1000` | Maximum per-side tax = 10% |
+| `PANCAKE_ROUTER()` | `0x10ED43C718714eb63d5aA57B78B54704E256024E` | PancakeSwap V2 router on BSC mainnet |
+| `TOTAL_SUPPLY()` | `1000000000000000000` | Total supply units (1e9 tokens with 9 decimals) |
+| `WETH()` | `0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c` | WBNB address used as base pair |
+| `buyTax()` | `300` | 3% buy tax (300/10000) |
 | `decimals()` | `9` | Token uses 9 decimals |
-| `dexRouter()` | `0x10ED...024E` | Router instance controlling swaps |
-| `limitsEnabled()` | `true` | Max tx/wallet limits currently enforced |
-| `lpPair()` | `0x31f2...2544` | Main liquidity pair address |
-| `marketingWallet()` | `0x049C...Bdf5` | Destination for swap proceeds and rescues |
-| `maxTxAmount()` | `20000000000000000` | 2% of total supply in base units |
-| `maxWalletAmount()` | `20000000000000000` | 2% of total supply in base units |
+| `dexRouter()` | `0x10ED43C718714eb63d5aA57B78B54704E256024E` | Router used for swaps and LP pair creation |
+| `limitsEnabled()` | `false` | Anti-whale limits currently disabled |
+| `lpPair()` | `0x31f29CE4368001d9EfE65A5E2F35335A3A382544` | Pancake pair address for WINU/WBNB |
+| `marketingWallet()` | `0x049C425281F8d455185F1BD7C84CCE22f0D3Bdf5` | Receives BNB from tax swaps and withdrawals |
+| `maxTxAmount()` | `1000000000000000000` | Set to full supply (limit ineffective) |
+| `maxWalletAmount()` | `1000000000000000000` | Set to full supply (limit ineffective) |
 | `name()` | `World Cup Inu` | Contract name identifier |
-| `owner()` | `0x57969346cc1879071E3C1b2f8d6c3523E9CA329D` | Address holding admin privileges |
-| `sellTax()` | `300` | Sell tax set to 3% (300/10000) |
-| `swapEnabled()` | `true` | Automated tax swap is enabled |
-| `swapTokensAtAmount()` | `2500000000000000` | Swap threshold 0.25% of supply |
-| `symbol()` | `WINU` | Token ticker |
-| `totalSupply()` | `1000000000000000000` | Same as TOTAL_SUPPLY; total minted |
-| `tradingEnabled()` | `false` | Public trading not yet enabled |
+| `owner()` | `0x57969346cc1879071E3C1b2f8d6c3523E9CA329D` | Address with admin privileges |
+| `sellTax()` | `300` | 3% sell tax (300/10000) |
+| `swapEnabled()` | `true` | Automatic tax swapping currently enabled |
+| `swapTokensAtAmount()` | `2500000000000000` | Auto-swap threshold = 0.25% supply |
+| `symbol()` | `WINU` | Contract symbol |
+| `totalSupply()` | `1000000000000000000` | Total tokens ever created |
+| `tradingEnabled()` | `true` | Public trading is enabled |
 
 ### Findings Summary
 
-| Severity | Count | Key Issues |
-|---------|-------|------------|
+| Severity | Count | Key Items |
+|---------|-------|-----------|
 | Critical | 0 | — |
 | High | 0 | — |
-| Medium | 3 | MEV/slippage risk on swaps; Arbitrary AMM pair marking affects fees/limits; ManualSwap can dump full balance |
-| Low | 3 | Custom SafeERC20/Address deviations; Trading gate can brick if misused; Owner-controlled exemptions create unequal trading |
+| Medium | 2 | Pre-launch trading by privileged addresses; Zero-slippage swaps (MEV exposure) |
+| Low | 4 | Non-standard `Address.functionCall`; Ignored BNB transfer failure; AMM flagging risk; Anti-whale removable |
 
 ### Critical Findings
 
@@ -99,20 +99,46 @@ None.
 
 ---
 
-#### 🟡 [M-1] Zero-minOut swaps enable MEV/sandwiching and poor execution on tax conversions
+#### 🟡 [M-1] Privileged addresses can trade before `tradingEnabled` (launch fairness risk)
 
 **Description:**
-`swapExactTokensForETHSupportingFeeOnTransferTokens` is called with `amountOutMin = 0`, exposing swaps to front‑running and poor price execution.
+The `tradingEnabled` gate only applies when both `from` and `to` are not fee-exempt. `owner`, `marketingWallet`, `address(this)`, and `DEAD` are fee-exempt from deployment, allowing them to trade before the public launch.
+
+```solidity
+function _transfer(address from, address to, uint256 amount) internal override {
+    ...
+    if (!exemptFromFees[from] && !exemptFromFees[to]) {
+        require(tradingEnabled, "Trading is not enabled");
+    }
+    ...
+}
+```
+
+**Impact:**
+Owner/marketing can buy/sell/add-liquidity/snipe before public trading, potentially impacting price discovery and fairness.
+
+**Location:**
+`WorldCupInu._transfer()`
+
+**💡 Recommendation:**
+> **Action Required:**
+> 1. Introduce a dedicated `launched` flag requiring `from == owner()` and `to == lpPair` during initial liquidity only.
+> 2. Optionally remove fee-exempt status for privileged addresses until trading is enabled.
+> - Alternative: Add an allowlist for initial liquidity providers only.
+
+---
+
+#### 🟡 [M-2] `amountOutMin = 0` in swaps exposes tax swaps to MEV and poor rates
+
+**Description:**
+`swapTokensForBNB` passes `amountOutMin` as `0`, enabling sandwiches and extreme slippage during `swapBack()` and `manualSwap()`.
 
 ```solidity
 function swapTokensForBNB(uint256 tokenAmount) private {
-    address[] memory path = new address[](2);
-    path[0] = address(this);
-    path[1] = WETH;
-
+    ...
     dexRouter.swapExactTokensForETHSupportingFeeOnTransferTokens(
         tokenAmount,
-        0, // no slippage protection
+        0, // amountOutMin = 0
         path,
         address(this),
         block.timestamp
@@ -121,23 +147,80 @@ function swapTokensForBNB(uint256 tokenAmount) private {
 ```
 
 **Impact:**
-Attackers can sandwich tax swaps to extract value, depress price, and reduce BNB proceeds to `marketingWallet`.
+Collected taxes may be swapped at unfavorable prices, diminishing marketing funds and harming holders.
 
 **Location:**
-`swapTokensForBNB()` in `WorldCupInu`.
+`WorldCupInu.swapTokensForBNB()`
 
 **💡 Recommendation:**
 > **Action Required:**
-> 1. Use a reasonable `amountOutMin` (e.g., from TWAP or off-chain oracle) to mitigate slippage.
-> 2. Add a configurable minimum-out basis points parameter controlled by governance.
-> - Alternative: Rate-limit swaps or randomize swap sizes/timing to reduce predictability.
+> 1. Add router slippage protection by computing a conservative `amountOutMin` from TWAP/Oracle or reserve check.
+> 2. Split swaps into smaller chunks beyond the existing 5x cap to reduce impact.
+> - Alternative: Allow owner to configure a minimum out bps parameter.
 
 ---
 
-#### 🟡 [M-2] Owner can arbitrarily mark any address as AMM pair, affecting fees and bypassing wallet limit
+### Low Findings
+
+---
+
+#### 🟢 [L-1] Custom `Address.functionCall` omits `isContract` check
 
 **Description:**
-`setAMMPair` allows the owner to set any address as an AMM pair. In `_transfer`, fees and wallet-limit logic depend on `isAMMPair[from]`/`isAMMPair[to]`.
+The helper does not verify that the `target` has code, unlike OpenZeppelin. While used only via `SafeERC20.safeTransfer`, this can mask misconfiguration in generic usage.
+
+```solidity
+library Address {
+    function functionCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {
+        (bool success, bytes memory returndata) = target.call(data);
+        if (success) { return returndata; }
+        if (returndata.length > 0) { assembly { ... } }
+        revert(errorMessage);
+    }
+}
+```
+
+**Impact:**
+Calling an EOA could return success with empty data; in other contexts this may silently no-op.
+
+**Location:**
+`Address.functionCall()`, used in `SafeERC20.safeTransfer()`.
+
+**💡 Recommendation:**
+> **Action Required:**
+> 1. Add `require(Address.isContract(target), "call to non-contract")` prior to low-level calls.
+> 2. Prefer importing unmodified OpenZeppelin `Address` and `SafeERC20`.
+
+---
+
+#### 🟢 [L-2] Ignoring failure when sending BNB to `marketingWallet` in `swapBack`
+
+**Description:**
+If `marketingWallet` rejects funds, the call’s failure is ignored and only the event reflects zero sent; funds remain in the contract.
+
+```solidity
+(bool success, ) = payable(marketingWallet).call{value: newBalance}("");
+emit TaxesSwapped(tokenAmount, success ? newBalance : 0);
+```
+
+**Impact:**
+Temporary inability to forward BNB; requires `withdrawStuckBNB()` to recover.
+
+**Location:**
+`WorldCupInu.swapBack()`
+
+**💡 Recommendation:**
+> **Action Required:**
+> 1. Consider reverting on failed transfer, or
+> 2. Add a retry mechanism or a fallback recipient.
+> - Alternative: Document operational runbook to call `withdrawStuckBNB()` when needed.
+
+---
+
+#### 🟢 [L-3] Owner can arbitrarily flag addresses as AMM pairs (unexpected taxation routes)
+
+**Description:**
+`setAMMPair()` lets the owner mark any address as an AMM pair (excluding the main pair). Transfers to/from such addresses will be considered buys/sells and taxed.
 
 ```solidity
 function setAMMPair(address pair, bool value) external onlyOwner {
@@ -146,206 +229,76 @@ function setAMMPair(address pair, bool value) external onlyOwner {
     isAMMPair[pair] = value;
     emit AMMPairUpdated(pair, value);
 }
-
-if (limitsEnabled && !swapping && !exemptFromTx[from] && !exemptFromTx[to]) {
-    require(amount <= maxTxAmount, "Max transaction exceeded");
-
-    if (!isAMMPair[to]) {
-        require(balanceOf(to) + amount <= maxWalletAmount, "Max wallet exceeded");
-    }
-}
 ```
 
 **Impact:**
-- Transfers to addresses flagged as AMM pairs skip the max-wallet check.
-- Transfers from/to such addresses are reclassified as buy/sell, changing applicable tax rates.
-- Enables selective treatment of users, impacting fairness and predictability.
+Unexpected taxes on transfers to designated addresses or custom routers, potentially affecting integrations and user expectations.
 
 **Location:**
-`setAMMPair()` and `_transfer()` conditions.
+`WorldCupInu.setAMMPair()`
 
 **💡 Recommendation:**
 > **Action Required:**
-> 1. Restrict AMM pair updates to validated DEX pairs (verify factory/pair code).
-> 2. Maintain an allowlist of known factories or disable arbitrary updates after launch.
-> - Alternative: Add a one-way “lock pairs” function after configuration.
+> 1. Restrict AMM list changes post-launch, or
+> 2. Make AMM curation transparent via timelock/multisig.
+> - Alternative: Hardcode only known AMMs if feasible.
 
 ---
 
-#### 🟡 [M-3] `manualSwap` can dump entire contract token balance regardless of `swapEnabled`/threshold
+#### 🟢 [L-4] Anti-whale protections can be fully removed by owner
 
 **Description:**
-`manualSwap()` ignores `swapEnabled` and threshold; it swaps the entire contract token balance in one transaction.
+`limitsEnabled` can be disabled, and `maxTxAmount`/`maxWalletAmount` can be set to any value ≥ 2% supply. On-chain, both are set to full supply and `limitsEnabled=false`.
 
 ```solidity
-function manualSwap() external {
-    require(_msgSender() == marketingWallet || _msgSender() == owner(), "Not authorized");
-    uint256 contractBalance = balanceOf(address(this));
-    require(contractBalance > 0, "No tokens to swap");
-
-    swapping = true;
-
-    uint256 initialBalance = address(this).balance;
-    swapTokensForBNB(contractBalance); // full dump
-    uint256 newBalance = address(this).balance - initialBalance;
-
-    if (newBalance > 0) {
-        (bool success, ) = payable(marketingWallet).call{value: newBalance}("");
-        emit TaxesSwapped(contractBalance, success ? newBalance : 0);
-    }
-
-    swapping = false;
+function updateMaxTxAmount(uint256 newAmount) external onlyOwner {
+    require(newAmount >= (TOTAL_SUPPLY * MAX_LIMIT) / FEE_DENOMINATOR, "Cannot set below 2%");
+    ...
 }
 ```
 
 **Impact:**
-Large, sudden sells can cause severe price impact and slippage, enabling value extraction or destabilizing markets.
+No effective anti-whale/anti-bot protections; large holders can accumulate/transact without constraint.
 
 **Location:**
-`manualSwap()` in `WorldCupInu`.
+`WorldCupInu.updateMaxTxAmount()`, `updateMaxWalletAmount()`, `setLimitsEnabled()`
 
 **💡 Recommendation:**
 > **Action Required:**
-> 1. Respect `swapEnabled` and `swapTokensAtAmount` in `manualSwap`.
-> 2. Add a configurable max swap chunk size and time throttle.
-> - Alternative: Split swaps into smaller batches automatically.
-
----
-
-### Low Findings
-
----
-
-#### 🟢 [L-1] Custom `Address.functionCall` lacks `isContract` verification (deviates from OpenZeppelin)
-
-**Description:**
-The custom `Address` and `SafeERC20` libraries differ from OZ: `functionCall` doesn’t verify target code size; `safeTransfer` accepts empty return data as success.
-
-```solidity
-library Address {
-    function functionCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {
-        (bool success, bytes memory returndata) = target.call(data);
-        if (success) {
-            return returndata;
-        }
-        if (returndata.length > 0) {
-            assembly {
-                let returndata_size := mload(returndata)
-                revert(add(32, returndata), returndata_size)
-            }
-        }
-        revert(errorMessage);
-    }
-}
-
-library SafeERC20 {
-    using Address for address;
-
-    function safeTransfer(IERC20 token, address to, uint256 value) internal {
-        bytes memory returndata = address(token).functionCall(
-            abi.encodeWithSelector(token.transfer.selector, to, value),
-            "SafeERC20: low-level transfer failed"
-        );
-        if (returndata.length > 0) {
-            require(abi.decode(returndata, (bool)), "SafeERC20: transfer failed");
-        }
-    }
-}
-```
-
-**Impact:**
-In general contexts, this can silently succeed for non-contract targets or non-standard tokens. Here, usage is limited to `rescueTokens`, mitigating impact.
-
-**Location:**
-`Address` and `SafeERC20` libraries.
-
-**💡 Recommendation:**
-> **Action Required:**
-> 1. Align with OpenZeppelin’s `Address`/`SafeERC20` (add `isContract` check; strict return handling).
-> - Alternative: Scope-check target code size before calling in `rescueTokens`.
-
----
-
-#### 🟢 [L-2] Trading gate can brick the token if owner misuses `renounceOwnership` before enabling trading
-
-**Description:**
-Transfers by non-exempt addresses require `tradingEnabled == true`. If ownership is renounced before enabling trading, trading cannot be enabled thereafter.
-
-```solidity
-if (!exemptFromFees[from] && !exemptFromFees[to]) {
-    require(tradingEnabled, "Trading is not enabled");
-}
-
-function enableTrading() external onlyOwner {
-    require(!tradingEnabled, "Trading already enabled");
-    tradingEnabled = true;
-    emit TradingEnabled();
-}
-```
-
-**Impact:**
-Token could remain untradable for regular users permanently.
-
-**Location:**
-`_transfer()` and `enableTrading()`.
-
-**💡 Recommendation:**
-> **Action Required:**
-> 1. Operational safeguard: Enable trading before ownership renounce.
-> - Alternative: Add a one-time irreversible initializer callable by anyone to enable trading after a set time.
-
----
-
-#### 🟢 [L-3] Owner-controlled exemptions may create unequal market conditions
-
-**Description:**
-Owner can set/unset fee/tx exemptions for arbitrary accounts.
-
-```solidity
-function setExemptFromFee(address account, bool isExempt) external onlyOwner { ... }
-function setExemptFromTx(address account, bool isExempt) external onlyOwner { ... }
-```
-
-**Impact:**
-Privileged addresses can bypass taxes and limits, enabling non-uniform trading advantages.
-
-**Location:**
-`setExemptFromFee`, `setExemptFromTx` and their removers.
-
-**💡 Recommendation:**
-> **Action Required:**
-> 1. Publish and maintain a transparent list of exempt addresses.
-> - Alternative: Reduce exemptions post-launch and/or time-lock changes.
+> 1. If anti-whale is desired, enforce sensible upper bounds and keep `limitsEnabled=true` during early trading.
+> 2. Communicate operational settings publicly.
 
 ---
 
 ### Good Practices
 
-- No mint/burn after deployment; fixed `TOTAL_SUPPLY`.
-- `MAX_TAX` capped at 10%; cannot exceed by owner.
-- Max tx and wallet limits cannot be set below 2% of supply (prevents honeypot-style lockups).
-- Main LP pair cannot be removed from AMM mapping.
-- Tax swap size capped to 5x threshold per `swapBack` to avoid oversized dumps.
-- Clear events for all sensitive parameter changes.
-- Ownership pattern is simple; no hidden backdoor or fake renounce detected.
+- Fixed supply minted once; no external mint/burn functions (supply cannot be increased).
+- Non-upgradeable; no proxy or delegatecall patterns detected.
+- Taxes capped at 10% per side; cannot exceed set maximums.
+- Main LP pair cannot be unset as AMM (`lpPair` protected).
+- `rescueTokens()` prevents rescuing this token, LP token, or any AMM pair token.
+- Ownership renunciation is standard (`address(0)`) with no restore/backdoor variables.
 
 ### Tokenomics Analysis
 
 | Feature | Value/Status | Risk Assessment |
 |---------|--------------|-----------------|
-| Contract Type | Standard (no proxy) | Low upgrade risk |
-| Upgrade Control | N/A | Low |
-| Ownership Status | Active (0x5796...) | Medium centralization |
-| Owner Address | 0x57969346cc1879071E3C1b2f8d6c3523E9CA329D | Current owner |
+| Contract Type | Standard (tax token) | Low (no upgrade risk) |
+| Upgrade Control | None (immutable code) | Low |
+| Ownership Status | Active (not renounced) | Medium (centralized control) |
+| Owner Address | 0x57969346cc1879071E3C1b2f8d6c3523E9CA329D | Current admin |
 | Total Supply | 1,000,000,000 tokens (9 decimals) | Low |
-| Buy Tax | 3% (max 10%) to marketing | Medium (owner-adjustable) |
-| Sell Tax | 3% (max 10%) to marketing | Medium (owner-adjustable) |
-| Max Transaction | 2% (floor ≥2%) | Low |
-| Max Wallet | 2% (floor ≥2%) | Low |
+| Buy Tax | 3% (max 10%) | Medium (owner adjustable) |
+| Sell Tax | 3% (max 10%) | Medium (owner adjustable) |
+| Max Transaction | Disabled effectively (limits off; set to full supply) | Low (no restriction) |
 
-- Taxes are routed entirely to `marketingWallet` after swaps; owner/marketing can trigger `manualSwap` and withdraw all BNB at any time. This is a standard marketing-tax pattern but centralizes control and introduces sell pressure when swapping.
-- Limits have a 2% floor, reducing risk of post-launch honeypot via tiny maxTx/wallet. However, owner can mark arbitrary addresses as AMM pairs, changing fee classification and bypassing the wallet limit for those addresses.
-- Balanced Assessment: No proxy/upgrades lower upgrade risk, but trust is required in the active owner for taxes, exemptions, and swap operations. MEV risk exists due to zero minOut swaps. Ownership appears properly implemented with no restore backdoor present.
+- Fees: Collected on AMM buys/sells only. Tokens are accrued to the contract, swapped for BNB, and forwarded to `marketingWallet`. Swap threshold is 0.25% supply; swaps capped to 5x threshold per trigger to limit impact.
+- Controls: Owner can adjust taxes up to 10% per side, toggle swap/limits, set fee/tx exemptions, and curate AMM pairs (cannot unset main pair). `marketingWallet` is owner-changeable and exempt from fees/tx limits.
+- Current posture (on-chain): `tradingEnabled=true`; `limitsEnabled=false`; `maxTxAmount` and `maxWalletAmount` are full supply (no anti-whale), `swapEnabled=true`, taxes at 3%/3%.
+- Rug risk: No mint/burn backdoors or upgradeability. Centralization risk persists through adjustable taxes and exemptions; funds from taxes go to `marketingWallet`, which can withdraw BNB. Ownership renunciation, if performed, would be proper (no restore backdoor observed).
+
+Ownership Renunciation Verification:
+- Owner is currently nonzero (active). No `previousOwner`, `restoreOwner`, `emergencyRecover`, or modifier side-doors observed. If renounced, ownership appears properly renounceable without backdoors.
 
 ---
 
